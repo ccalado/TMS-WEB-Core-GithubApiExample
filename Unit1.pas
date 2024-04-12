@@ -176,17 +176,6 @@ begin
 
   if CurrentCalendar <> NextCalendar then
   begin
-    if CurrentCalendar = -1  then
-    begin
-      {$IFNDEF WIN32}
-      asm {
-//        divChart.addEventListener('click', () =>
-//          window.open(window.location.href, '_blank').focus()
-//        );
-      } end;
-      {$ENDIF}
-    end;
-
     CurrentCalendar := NextCalendar;
 
     {$IFNDEF WIN32}
@@ -198,8 +187,6 @@ begin
       divMain.style.setProperty('position', 'absolute');
       divMain.style.setProperty('width', '100%');
       divMain.style.setProperty('height', '100%');
-
-//              contributionsCollection(from: "${start_date}", to: "${finish_date}") {
 
 async function Get_GitHub_Data(GITHUB_ACCOUNT, GITHUB_TOKEN, start_date, finish_date) {
   const QUERY = `
@@ -229,6 +216,19 @@ async function Get_GitHub_Data(GITHUB_ACCOUNT, GITHUB_TOKEN, start_date, finish_
     body: JSON.stringify({ query: QUERY })
   };
 
+  const localStorageKey = `github_contributions_${GITHUB_ACCOUNT}`;
+  const cachedData = localStorage.getItem(localStorageKey);
+  const currentTime = new Date().getTime();
+
+  if (cachedData) {
+    const { data, timestamp } = JSON.parse(cachedData);
+    const oneHourInMilliseconds = 60 * 60 * 1000;
+
+    if (currentTime - timestamp < oneHourInMilliseconds) {
+      return data;
+    }
+  }
+
   return fetch('https://api.github.com/graphql', options)
     .then(res => res.json())
     .then(data => {
@@ -242,6 +242,9 @@ async function Get_GitHub_Data(GITHUB_ACCOUNT, GITHUB_TOKEN, start_date, finish_
           });
         });
       });
+
+      localStorage.setItem(localStorageKey, JSON.stringify({ data: contributions, timestamp: currentTime }));
+
       return contributions;
     })
     .catch(err => {
@@ -249,114 +252,114 @@ async function Get_GitHub_Data(GITHUB_ACCOUNT, GITHUB_TOKEN, start_date, finish_
     });
 }
 
-var calendardata = await Get_GitHub_Data(
-  this.Param_Calendar,
-  this.Param_GitHubToken,
-  new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toJSON(),
-  new Date().toJSON()
-);
+      var calendardata = await Get_GitHub_Data(
+        this.Param_Calendar,
+        this.Param_GitHubToken,
+        new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toJSON(),
+        new Date().toJSON()
+      );
 
-var divChart = document.getElementById('divChart');
-divChart.replaceChildren();
+      var divChart = document.getElementById('divChart');
+      divChart.replaceChildren();
 
-var started = false;
-var totalContributions = 0;
-var daysWithContributions = 0;
-var busiestDay = { date: '', count: 0 };
-var currentStreak = 0;
-var longestStreak = 0;
-var busiestWeek = 0;
-var busiestWeekContributions = 0;
+      var started = false;
+      var totalContributions = 0;
+      var daysWithContributions = 0;
+      var busiestDay = { date: '', count: 0 };
+      var currentStreak = 0;
+      var longestStreak = 0;
+      var busiestWeek = 0;
+      var busiestWeekContributions = 0;
 
-// Calculate weekday counts
-const weekdayCounts = new Array(7).fill(0);
-calendardata.forEach(day => {
-  const weekday = new Date(day.date).getDay();
-  weekdayCounts[weekday] += day.count;
-});
-const mostActiveDayIndex = weekdayCounts.indexOf(Math.max(...weekdayCounts));
-const mostActiveDay = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][mostActiveDayIndex];
+      // Calculate weekday counts
+      const weekdayCounts = new Array(7).fill(0);
+      calendardata.forEach(day => {
+        const weekday = new Date(day.date).getDay();
+        weekdayCounts[weekday] += day.count;
+      });
+      const mostActiveDayIndex = weekdayCounts.indexOf(Math.max(...weekdayCounts));
+      const mostActiveDay = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][mostActiveDayIndex];
 
-// Calculate longest streak
-let currentStreakLength = 0;
-calendardata.forEach(day => {
-  if (day.count > 0) {
-    currentStreakLength++;
-    longestStreak = Math.max(longestStreak, currentStreakLength);
-  } else {
-    currentStreakLength = 0;
-  }
-});
+      // Calculate longest streak
+      let currentStreakLength = 0;
+      calendardata.forEach(day => {
+        if (day.count > 0) {
+          currentStreakLength++;
+          longestStreak = Math.max(longestStreak, currentStreakLength);
+        } else {
+          currentStreakLength = 0;
+        }
+      });
 
-// Calculate busiest week
-calendardata.forEach(day => {
-  if (day.count > busiestWeekContributions) {
-    busiestWeek = day.weekNumber;
-    busiestWeekContributions = day.count;
-  }
-});
+      // Calculate busiest week
+      calendardata.forEach(day => {
+        if (day.count > busiestWeekContributions) {
+          busiestWeek = day.weekNumber;
+          busiestWeekContributions = day.count;
+        }
+      });
 
-for (let i = 0; i < calendardata.length; i++) {
-  if ((started == false) && (new Date(calendardata[i].date).getUTCDay() == 0)) {
-    started = true;
-  }
+      for (let i = 0; i < calendardata.length; i++) {
+        if ((started == false) && (new Date(calendardata[i].date).getUTCDay() == 0)) {
+          started = true;
+        }
 
-  if (started == true) {
-    var cal = document.createElement('div');
-    if (calendardata[i].count == 0) {
-      cal.classList.add('None');
-    } else if (calendardata[i].count < 6) {
-      cal.classList.add('Low');
-    } else if (calendardata[i].count < 11) {
-      cal.classList.add('Medium');
-    } else {
-      cal.classList.add('High');
-      cal.innerHTML = calendardata[i].count;
-    }
-    if (new Date(calendardata[i].date).getUTCDate() == 1) {
-      cal.classList.add('First');
-    }
+        if (started == true) {
+          var cal = document.createElement('div');
+          if (calendardata[i].count == 0) {
+            cal.classList.add('None');
+          } else if (calendardata[i].count < 6) {
+            cal.classList.add('Low');
+          } else if (calendardata[i].count < 11) {
+            cal.classList.add('Medium');
+          } else {
+            cal.classList.add('High');
+            cal.innerHTML = calendardata[i].count;
+          }
+          if (new Date(calendardata[i].date).getUTCDate() == 1) {
+            cal.classList.add('First');
+          }
 
-    cal.setAttribute('title', `Week ${calendardata[i].weekNumber}: ${calendardata[i].date} - ${calendardata[i].count} contributions`);
-    divChart.appendChild(cal);
+          cal.setAttribute('title', `Week ${calendardata[i].weekNumber}: ${calendardata[i].date} - ${calendardata[i].count} contributions`);
+          divChart.appendChild(cal);
 
-    // Update summary values
-    totalContributions += calendardata[i].count;
-    if (calendardata[i].count > 0) {
-      daysWithContributions++;
-      currentStreak++;
-    } else {
-      currentStreak = 0;
-    }
-    if (calendardata[i].count > busiestDay.count) {
-      busiestDay = { date: calendardata[i].date, count: calendardata[i].count };
-    }
-  }
-}
+          // Update summary values
+          totalContributions += calendardata[i].count;
+          if (calendardata[i].count > 0) {
+            daysWithContributions++;
+            currentStreak++;
+          } else {
+            currentStreak = 0;
+          }
+          if (calendardata[i].count > busiestDay.count) {
+            busiestDay = { date: calendardata[i].date, count: calendardata[i].count };
+          }
+        }
+      }
 
-// Calculate and display summary information
-const totalDays = calendardata.length;
-const dutyCycle = ((daysWithContributions / totalDays) * 100).toFixed(1);
-const busiestDayStr = `${new Date(busiestDay.date).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })} (${busiestDay.count}c)`;
-const busiestWeekdayStr = `${mostActiveDay} (${weekdayCounts[mostActiveDayIndex]}c)`;
-const longestStreakStr = `${longestStreak}`;
-const busiestWeekStr = `W${busiestWeek}`;
+      // Calculate and display summary information
+      const totalDays = calendardata.length;
+      const dutyCycle = ((daysWithContributions / totalDays) * 100).toFixed(1);
+      const busiestDayStr = `${new Date(busiestDay.date).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })} (${busiestDay.count}c)`;
+      const busiestWeekdayStr = `${mostActiveDay} (${weekdayCounts[mostActiveDayIndex]}c)`;
+      const longestStreakStr = `${longestStreak}`;
+      const busiestWeekStr = `W${busiestWeek}`;
 
-const summaryElement = document.createElement('div');
-summaryElement.id = 'calendar-summary';
-summaryElement.innerHTML = `
-  <div class="calendar-summary">
-    <div class="calendar-label">C:</div><div class="calendar-value">${totalContributions}</div>
-    <div class="calendar-label">D:</div><div class="calendar-value">${dutyCycle}%</div>
-    <div class="calendar-label">Day:</div><div class="calendar-value">${busiestDayStr}</div>
-    <div class="calendar-label">Wd:</div><div class="calendar-value">${busiestWeekdayStr}</div>
-    <div class="calendar-label">Wk:</div><div class="calendar-value">${busiestWeekStr}</div>
-    <div class="calendar-label">Streak:</div><div class="calendar-value">${currentStreak}d</div>
-    <div class="calendar-label">Record:</div><div class="calendar-value">${longestStreakStr}d</div>
-  </div>
-`;
+      const summaryElement = document.createElement('div');
+      summaryElement.id = 'calendar-summary';
+      summaryElement.innerHTML = `
+        <div class="calendar-summary">
+          <div class="calendar-label">C:</div><div class="calendar-value">${totalContributions}</div>
+          <div class="calendar-label">D:</div><div class="calendar-value">${dutyCycle}%</div>
+          <div class="calendar-label">Day:</div><div class="calendar-value">${busiestDayStr}</div>
+          <div class="calendar-label">Wd:</div><div class="calendar-value">${busiestWeekdayStr}</div>
+          <div class="calendar-label">Wk:</div><div class="calendar-value">${busiestWeekStr}</div>
+          <div class="calendar-label">Streak:</div><div class="calendar-value">${currentStreak}d</div>
+          <div class="calendar-label">Record:</div><div class="calendar-value">${longestStreakStr}d</div>
+        </div>
+      `;
 
-divChart.parentNode.appendChild(summaryElement);
+      divChart.parentNode.appendChild(summaryElement);
     }  end;
     {$ENDIF}
   end;
@@ -392,86 +395,103 @@ begin
     }
 
 
-    const fetchGitHubRepoData = async (githubToken, pageSize, refresh = false) => {
-      const headers = {
-        Authorization: `Bearer ${githubToken}`,
-        Accept: 'application/vnd.github+json',
-      };
+const fetchGitHubRepoData = async (githubToken, pageSize, refresh = false) => {
+  const headers = {
+    Authorization: `Bearer ${githubToken}`,
+    Accept: 'application/vnd.github+json',
+  };
 
-      let page = 1;
-      let repos = [];
-      let hasMorePages = true;
+  const localStorageKey = "github_repo_data_"+this.Param_Account;
+  const cachedData = localStorage.getItem(localStorageKey);
+  const currentTime = new Date().getTime();
 
-      while (hasMorePages) {
-        const response = await fetch(`https://api.github.com/user/repos?per_page=${pageSize}&page=${page}`, {
-          headers,
-        });
-        const repoData = await response.json();
-        repos = [...repos, ...repoData];
-        hasMorePages = repoData.length === pageSize;
-        page++;
-      }
+  if (cachedData || !refresh) {
+    console.log('Retrieving Chart data from Cache');
+    const { data, timestamp } = JSON.parse(cachedData);
+    const expirationTime = 60 * 60 * 1000; // 1 hour in milliseconds
 
-      // Filter out other repositories
-      for(var i = 0; i < repos.length; i++) {
-        if (!repos[i].full_name.startsWith(this.Param_Account)) {
-          repos.splice(i,1);
-        }
-      }
-
-      const updatedRepos = await Promise.all(
-        repos.map(async (repo) => {
-          const [trafficData, discussionsData] = await Promise.all([
-            fetch(`https://api.github.com/repos/${repo.owner.login}/${repo.name}/traffic/views`, {
-              headers,
-            }).then(res => res.json()),
-            fetch('https://api.github.com/graphql', {
-              method: 'POST',
-              headers: {
-                ...headers,
-                'Content-Type': 'application/json',
-            },
-              body: JSON.stringify({
-                    query: `
-                  query($owner: String!, $name: String!) {
-                    repository(owner: $owner, name: $name) {
-                      discussions {
-                       totalCount
-                      }
-                    }
-              }
-                `,
-                variables: {
-                 owner: repo.owner.login,
-                  name: repo.name,
-                },
-              }),
-            }).then(res => res.json())
-           ]);
-
-          return {
-            ...repo,
-            traffic: {
-              views: trafficData.views.map(view => ({
-                timestamp: addOneDayToDate(new Date(view.timestamp)),
-                uniques: view.uniques,
-              })),
-            },
-            updated_at: repo.updated_at,
-            language: repo.language,
-            license: repo.license ? repo.license.name : null,
-            private: repo.private,
-            stargazers_count: repo.stargazers_count || 0,
-            forks_count: repo.forks_count || 0,
-            watchers_count: repo.watchers_count || 0,
-            discussions_count: discussionsData.data.repository.discussions.totalCount,
-            subscribers_count: repo.subscribers_count || 0,
-          }
-        })
-      )
-      return updatedRepos;
+    if (currentTime - timestamp < expirationTime) {
+      return data;
     }
+  }
 
+  console.log('Retrieving Chart data from GitHub');
+  let page = 1;
+  let repos = [];
+  let hasMorePages = true;
+
+  while (hasMorePages) {
+    const response = await fetch(`https://api.github.com/user/repos?per_page=${pageSize}&page=${page}`, {
+      headers,
+    });
+    const repoData = await response.json();
+    repos = [...repos, ...repoData];
+    hasMorePages = repoData.length === pageSize;
+    page++;
+  }
+
+  // Filter out other repositories
+  for (var i = 0; i < repos.length; i++) {
+    if (!repos[i].full_name.startsWith(this.Param_Account)) {
+      repos.splice(i, 1);
+    }
+  }
+
+  const updatedRepos = await Promise.all(
+    repos.map(async (repo) => {
+      const [trafficData, discussionsData] = await Promise.all([
+        fetch(`https://api.github.com/repos/${repo.owner.login}/${repo.name}/traffic/views`, {
+          headers,
+        }).then(res => res.json()),
+        fetch('https://api.github.com/graphql', {
+          method: 'POST',
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: `
+              query($owner: String!, $name: String!) {
+                repository(owner: $owner, name: $name) {
+                  discussions {
+                    totalCount
+                  }
+                }
+              }
+            `,
+            variables: {
+              owner: repo.owner.login,
+              name: repo.name,
+            },
+          }),
+        }).then(res => res.json())
+      ]);
+
+      return {
+        ...repo,
+        traffic: {
+          views: trafficData.views.map(view => ({
+            timestamp: addOneDayToDate(new Date(view.timestamp)),
+            uniques: view.uniques,
+          })),
+        },
+        updated_at: repo.updated_at,
+        language: repo.language,
+        license: repo.license ? repo.license.name : null,
+        private: repo.private,
+        stargazers_count: repo.stargazers_count || 0,
+        forks_count: repo.forks_count || 0,
+        watchers_count: repo.watchers_count || 0,
+        discussions_count: discussionsData.data.repository.discussions.totalCount,
+        subscribers_count: repo.subscribers_count || 0,
+      };
+    })
+  );
+
+  localStorage.setItem(localStorageKey, JSON.stringify({ data: updatedRepos, timestamp: currentTime }));
+
+  return updatedRepos;
+};
 
     const processTrafficData = (repos) => {
       const processedData = repos.map((repo) => {
@@ -542,7 +562,7 @@ begin
             const lastUpdatedTime = new Date(lastUpdatedObj ? lastUpdatedObj.timestamp : 0);
             const currentTime = new Date();
 
-//            if (refresh || currentTime - lastUpdatedTime > 60 * 60 * 1000) {
+
 
             // Data needs to be refreshed or the hour (more specifically the day) has changed
             if (refresh || (currentTime.getHours() !== lastUpdatedTime.getHours())) {
@@ -691,6 +711,7 @@ function chartTraffic(
   rounding = "5px",
   animTime = 1500
 ) {
+  console.log('Drawing chart');
   // Parse and format dates
   const parseDate = d3.utcParse("%Y-%m-%dT%H:%M:%SZ");
   const formatDate = d3.timeFormat("%b%d");
@@ -914,15 +935,15 @@ function chartTraffic(
     .style("text-shadow", "0px 0px 10px rgba(255, 255, 255, 1)")
     .text("");
 
-//      return {
-//        svg,
-//        x,
-//        xAxis,
-//        y
-//      };
+      return {
+        svg,
+        x,
+        xAxis,
+        y
+      };
     }
 
-
+    console.log('Updating Chart');
     getTrafficData(this.Param_GitHubToken, pageSize, true)
       .then(processedData => {
 
@@ -1424,7 +1445,7 @@ var
 begin
 
   // If the token doesn't pass muster then ask again
-  if Length(GitHubToken) < 50 then
+  if Length(GitHubToken) < 40 then
   begin
     WebEdit1.Text := '';
     WebEdit1.TextHint := 'Token is too short. Please try again.';
@@ -1545,7 +1566,7 @@ begin
     ]
     this.tabRepos = new Tabulator("#divTabulator", {
       layout: "fitColumns",
-      selectable: true,
+      selectableRows: true,
       initialSort:[
         {column:"subscribers_count", dir:"desc"}
       ],
@@ -1705,14 +1726,15 @@ begin
   WebEdit1.SetFocus;
 end;
 
-function GetIntervalToNextHour: Cardinal;
+function GetIntervalToNextHour: Integer;
 var
   RightNow: TDateTime;
   NextHour: TDateTime;
 begin
-  RightNow := Now();
-  NextHour := EncodeTime(HourOf(RightNow) + 1, 0, 0, 0);
-  Result := Round((NextHour - RightNow) * MSecsPerDay);
+  RightNow := Now;
+  NextHour := EncodeDateTime(YearOf(RightNow), MonthOf(RightNow), DayOf(RightNow), HourOf(RightNow) + 1, 0, 0, 0);
+  Result := 1000 * Trunc((NextHour - RightNow) * 86400.0);
+  console.log('Setting interval to '+IntToStr(Result));
 end;
 
 procedure TForm1.WebTimer1Timer(Sender: TObject);
